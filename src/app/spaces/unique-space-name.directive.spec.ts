@@ -1,13 +1,15 @@
 import { async, TestBed } from '@angular/core/testing';
-import { ValidSpaceNameValidatorDirective, validSpaceNameValidator } from './valid-space-name.directive'
+import { UniqueSpaceNameValidatorDirective } from './unique-space-name.directive'
 import { FormsModule, NgForm } from '@angular/forms';
 import { Component } from '@angular/core';
 import { By } from '@angular/platform-browser';
+import { SpaceService } from './space.service';
+import { UserService } from 'ngx-login-client';
 
 @Component({
   template: `
     <form>
-      <input name="spaceName" [ngModel]="spaceName" validSpaceName />
+      <input name="spaceName" [ngModel]="spaceName" uniqueSpaceName />
     </form>
   `
 })
@@ -18,13 +20,16 @@ class TestSpaceNameComponent {
 describe('Directive for Name Space', () => {
 
   beforeEach(() => {
+    const spaceServiceSpy = jasmine.createSpyObj('SpaceService', ['get']);
+    const userServiceSpy = jasmine.createSpyObj('UserService', ['get']);
     TestBed.configureTestingModule({
       imports: [FormsModule],
-      declarations: [TestSpaceNameComponent, ValidSpaceNameValidatorDirective]
+      declarations: [TestSpaceNameComponent, UniqueSpaceNameValidatorDirective],
+      providers:[{provide: SpaceService, useValue: spaceServiceSpy}, {provide: UserService, useValue: userServiceSpy}]
     });
   });
 
-  it('Validate false when name starts with unsupported characters', async(() => {
+  it('Validate false when 2 spaces exist with same name', async(() => {
     // given
     let fixture = TestBed.createComponent(TestSpaceNameComponent);
     let comp = fixture.componentInstance;
