@@ -19,7 +19,7 @@ describe('Pipe used for Name Space', () => {
     expect(spaceNameTansformed).toEqual('a test_with_space');
   }));
 
-  it('Replace first underscore with space', async(() => {
+  it('Do not fail with undefined/nil value', async(() => {
     // given
     let fixture = new SpaceNamePipe();
     // when

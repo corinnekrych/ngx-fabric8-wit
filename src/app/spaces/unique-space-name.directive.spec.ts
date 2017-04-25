@@ -5,6 +5,8 @@ import { Component } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { SpaceService } from './space.service';
 import { UserService } from 'ngx-login-client';
+import { Space } from '../models/space'
+import { Observable, ConnectableObservable } from 'rxjs';
 
 @Component({
   template: `
@@ -18,10 +20,49 @@ class TestSpaceNameComponent {
 }
 
 describe('Directive for Name Space', () => {
+  let spaceServiceSpy: any;
+  let userServiceSpy: any;
+  let space: Space;
 
   beforeEach(() => {
-    const spaceServiceSpy = jasmine.createSpyObj('SpaceService', ['get']);
-    const userServiceSpy = jasmine.createSpyObj('UserService', ['get']);
+    spaceServiceSpy = jasmine.createSpyObj('SpaceService', ['getSpaceByName']);
+    userServiceSpy = jasmine.createSpy('UserService');
+    space =  {
+      name: 'TestSpace',
+      path: 'testspace',
+      teams: [],
+      defaultTeam: null,
+      'attributes': {
+        'name': 'TestSpace',
+        description: 'This is a space for unit test',
+        'created-at': null,
+        'updated-at': null,
+        'version': 0
+      },
+      'id': '1',
+      'type': 'spaces',
+      'links': {
+        'self': 'http://example.com/api/spaces/1'
+      },
+      'relationships': {
+        areas: {
+          links: {
+            related: 'http://example.com/api/spaces/1/areas'
+          }
+        },
+        iterations: {
+          links: {
+            related: 'http://example.com/api/spaces/1/iterations'
+          }
+        },
+        'owned-by': {
+          'data': {
+            'id': '00000000-0000-0000-0000-000000000000',
+            'type': 'identities'
+          }
+        }
+      }
+    };
     TestBed.configureTestingModule({
       imports: [FormsModule],
       declarations: [TestSpaceNameComponent, UniqueSpaceNameValidatorDirective],
@@ -31,103 +72,42 @@ describe('Directive for Name Space', () => {
 
   it('Validate false when 2 spaces exist with same name', async(() => {
     // given
+    let user = {
+      "attributes": {
+        "fullName": "name",
+        "imageURL": "",
+        "username": "myUser"
+      },
+      "id": "userId",
+      "type": "userType"
+    };
     let fixture = TestBed.createComponent(TestSpaceNameComponent);
+    userServiceSpy.loggedInUser = ConnectableObservable.of(user);
+    spaceServiceSpy.getSpaceByName.and.returnValue(Observable.of(space));
+
+
     let comp = fixture.componentInstance;
     let debug = fixture.debugElement;
     let input = debug.query(By.css('input'));
-    input.nativeElement.value = 'start';
+    input.nativeElement.value = 'start'
     input.nativeElement.dispatchEvent( new Event('input'));
     fixture.detectChanges();
 
    fixture.whenStable().then(() => {
      // when
-      input.nativeElement.value = '_start2';
+      input.nativeElement.value = 'TestSpace';
       input.nativeElement.dispatchEvent( new Event('input'));
       fixture.detectChanges();
       fixture.whenStable().then(() => {
         let form: NgForm = debug.children[0].injector.get(NgForm);
         let control = form.control.get('spaceName');
         // then
-        expect(control.hasError('invalid')).toBe(true);
-        expect(control.errors.invalid.valid).toBeFalsy();
+        expect(control.hasError('unique')).toBe(true);
+        expect(control.errors.unique.valid).toBeFalsy();
+        expect(control.errors.unique.existingSpace.name).toEqual('TestSpace');
       });
    });
   }));
-
-  it('Validate true when underscore in the middle', async(() => {
-    // given
-    let fixture = TestBed.createComponent(TestSpaceNameComponent);
-    let comp = fixture.componentInstance;
-    let debug = fixture.debugElement;
-    let input = debug.query(By.css('input'));
-    input.nativeElement.value = 'start';
-    input.nativeElement.dispatchEvent( new Event('input'));
-    fixture.detectChanges();
-
-   fixture.whenStable().then(() => {
-     // when
-      input.nativeElement.value = 'start_3';
-      input.nativeElement.dispatchEvent( new Event('input'));
-      fixture.detectChanges();
-      fixture.whenStable().then(() => {
-        let form: NgForm = debug.children[0].injector.get(NgForm);
-        let control = form.control.get('spaceName');
-        // then
-        expect(control.errors).toBeNull();
-      });
-   });
-  }));
-
-  it('Validate false when there is not enough characters', async(() => {
-    // given
-    let fixture = TestBed.createComponent(TestSpaceNameComponent);
-    let comp = fixture.componentInstance;
-    let debug = fixture.debugElement;
-    let input = debug.query(By.css('input'));
-    input.nativeElement.value = 'start';
-    input.nativeElement.dispatchEvent( new Event('input'));
-    fixture.detectChanges();
-
-   fixture.whenStable().then(() => {
-     // when
-      input.nativeElement.value = 'sta';
-      input.nativeElement.dispatchEvent( new Event('input'));
-      fixture.detectChanges();
-      fixture.whenStable().then(() => {
-        let form: NgForm = debug.children[0].injector.get(NgForm);
-        let control = form.control.get('spaceName');
-        // then
-        expect(control.hasError('minLength')).toBe(true);
-        expect(control.errors.minLength.valid).toBeFalsy();
-      });
-   });
-  }));
-
-    it('Validate false when there is too many characters', async(() => {
-    // given
-    let fixture = TestBed.createComponent(TestSpaceNameComponent);
-    let comp = fixture.componentInstance;
-    let debug = fixture.debugElement;
-    let input = debug.query(By.css('input'));
-    input.nativeElement.value = 'start';
-    input.nativeElement.dispatchEvent( new Event('input'));
-    fixture.detectChanges();
-
-   fixture.whenStable().then(() => {
-     // when
-      input.nativeElement.value = 's1234567890123456789012345678901234567890123456789012345678901234567890';
-      input.nativeElement.dispatchEvent( new Event('input'));
-      fixture.detectChanges();
-      fixture.whenStable().then(() => {
-        let form: NgForm = debug.children[0].injector.get(NgForm);
-        let control = form.control.get('spaceName');
-        // then
-        expect(control.hasError('maxLength')).toBe(true);
-        expect(control.errors.maxLength.valid).toBeFalsy();
-      });
-   });
-  }));
-
 });
 
 
