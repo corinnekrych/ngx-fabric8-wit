@@ -16,8 +16,10 @@ describe('Service: SpaceService', () => {
   let spaceService: SpaceService;
   let mockService: MockBackend;
   let fakeAuthService: any;
+  let mockLog: any;
 
   beforeEach(() => {
+    mockLog = jasmine.createSpyObj('Logger', ['error']);
     fakeAuthService = {
       getToken: function () {
         return '';
@@ -28,7 +30,9 @@ describe('Service: SpaceService', () => {
     };
     TestBed.configureTestingModule({
       providers: [
-        Logger,
+        {
+          provide: Logger, useValue: mockLog
+        },
         BaseRequestOptions,
         MockBackend,
         {
@@ -107,6 +111,7 @@ describe('Service: SpaceService', () => {
 
 
   it('Get spaces', async(() => {
+    // given
     mockService.connections.subscribe((connection: any) => {
       connection.mockRespond(new Response(
         new ResponseOptions({
@@ -115,8 +120,9 @@ describe('Service: SpaceService', () => {
         })
       ));
     });
-
+    // when
     spaceService.getSpaces().subscribe((data: Space[]) => {
+      // then
       expect(data[0].id).toEqual(expectedResponse[0].id);
       expect(data[0].attributes.name).toEqual(expectedResponse[0].attributes.name);
       expect(data[0].attributes.description).toEqual(expectedResponse[0].attributes.description);
@@ -124,6 +130,7 @@ describe('Service: SpaceService', () => {
   }));
 
   it('Add new space', async(() => {
+    // given
     mockService.connections.subscribe((connection: any) => {
       connection.mockRespond(new Response(
         new ResponseOptions({
@@ -132,19 +139,34 @@ describe('Service: SpaceService', () => {
         })
       ));
     });
-
+    // when
     spaceService.create(responseData[0])
       .subscribe((data: Space) => {
+        // then
         expect(data.id).toEqual(expectedResponse[0].id);
         expect(data.attributes.name).toEqual(expectedResponse[0].attributes.name);
         expect(data.attributes.description).toEqual(expectedResponse[0].attributes.description);
       });
   }));
 
+  it('Add new space in error', async(() => {
+    // given
+    mockLog.error.and.returnValue();
+    mockService.connections.subscribe((connection: any) => {
+      connection.mockError(new Error('some error'));
+    });
+    // when
+    spaceService.create(responseData[0])
+      .subscribe((data: Space) => {
+        fail('Add new space should be in error');
+      }, // then
+      error => expect(error).toEqual('some error'));
+  }));
+
   it('Update a space', async(() => {
+    // given
     let updatedData: Space = cloneDeep(responseData[0]);
     updatedData.attributes.description = 'Updated description';
-
     mockService.connections.subscribe((connection: any) => {
       connection.mockRespond(new Response(
         new ResponseOptions({
@@ -153,16 +175,33 @@ describe('Service: SpaceService', () => {
         })
       ));
     });
-
+    // when
     spaceService.update(updatedData)
       .subscribe((data: Space) => {
+        // then
         expect(data.id).toEqual(updatedData.id);
         expect(data.attributes.name).toEqual(updatedData.attributes.name);
         expect(data.attributes.description).toEqual(updatedData.attributes.description);
       });
   }));
 
+  it('Update a space in error', async(() => {
+    // given
+    let updatedData: Space = cloneDeep(responseData[0]);
+    mockLog.error.and.returnValue();
+    mockService.connections.subscribe((connection: any) => {
+      connection.mockError(new Error('some error'));
+    });
+    // when
+    spaceService.update(updatedData)
+      .subscribe((data: Space) => {
+        fail('Update a space should be in error');
+      }, // then
+      error => expect(error).toEqual('some error'));
+  }));
+
   it('Get a single space', async(() => {
+    // given
     mockService.connections.subscribe((connection: any) => {
       connection.mockRespond(new Response(
         new ResponseOptions({
@@ -171,15 +210,30 @@ describe('Service: SpaceService', () => {
         })
       ));
     });
-
     let userName = "testuser";
-
+    // when
     spaceService.getSpaceByName(userName,responseData[0].attributes.name)
       .subscribe((data: Space) => {
+        // then
         expect(data.id).toEqual(expectedResponse[0].id);
         expect(data.attributes.name).toEqual(expectedResponse[0].attributes.name);
         expect(data.attributes.description).toEqual(expectedResponse[0].attributes.description);
       });
+  }));
+
+  it('Get a single space in error', async(() => {
+    // given
+    mockLog.error.and.returnValue();
+    mockService.connections.subscribe((connection: any) => {
+      connection.mockError(new Error('some error'));
+    });
+    let userName = "testuser";
+    // when
+    spaceService.getSpaceByName(userName,responseData[0].attributes.name)
+      .subscribe((data: Space) => {
+        fail('Get a single space should be in error');
+      }, // then
+      error => expect(error).toEqual('some error'));
   }));
 
   it('Search a space by name', async(() => {
@@ -202,6 +256,21 @@ describe('Service: SpaceService', () => {
       });
   }));
 
+  it('Search a space by name in error', async(() => {
+    // given
+    let matchedData: Space[] = cloneDeep(responseData);
+    mockLog.error.and.returnValue();
+    mockService.connections.subscribe((connection: any) => {
+      connection.mockError(new Error('some error'));
+    });
+    // when
+    spaceService.search("test")
+      .subscribe((data: Space[]) => {
+        fail('Search a space by name should be in error');
+      }, // then
+      error => expect(error).toEqual('some error'));
+  }));
+
   it('Get spaces by userName', async(() => {
     mockService.connections.subscribe((connection: any) => {
       connection.mockRespond(new Response(
@@ -221,7 +290,23 @@ describe('Service: SpaceService', () => {
     });
   }));
 
+  it('Get spaces by userName in error', async(() => {
+    // given
+    let matchedData: Space[] = cloneDeep(responseData);
+    mockLog.error.and.returnValue();
+    mockService.connections.subscribe((connection: any) => {
+      connection.mockError(new Error('some error'));
+    });
+    let userName = 'testUser';
+    // when
+    spaceService.getSpacesByUser(userName).subscribe((data: Space[]) => {
+      fail('Get spaces by userName should be in error');
+    }, // then
+    error => expect(error).toEqual('some error'));
+  }));
+
   it('Get a single space by Id', async(() => {
+    // given
     mockService.connections.subscribe((connection: any) => {
       connection.mockRespond(new Response(
         new ResponseOptions({
@@ -230,15 +315,29 @@ describe('Service: SpaceService', () => {
         })
       ));
     });
-
     let spaceId = '1';
-
+    // when
     spaceService.getSpaceById(spaceId)
       .subscribe((data: Space) => {
+        // then
         expect(data.id).toEqual(expectedResponse[0].id);
         expect(data.attributes.name).toEqual(expectedResponse[0].attributes.name);
         expect(data.attributes.description).toEqual(expectedResponse[0].attributes.description);
       });
+  }));
+
+  it('Get a single space by Id in error', async(() => {
+    // given
+    mockService.connections.subscribe((connection: any) => {
+      connection.mockError(new Error('some error'));
+    });
+    let spaceId = '1';
+    // when
+    spaceService.getSpaceById(spaceId)
+      .subscribe((data: Space) => {
+        fail('Get a single space by Id should be in error');
+      }, // then
+    error => expect(error).toEqual('some error'));
   }));
 
 });
